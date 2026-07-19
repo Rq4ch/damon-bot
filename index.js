@@ -30,7 +30,12 @@ const client = new Client({
 });
 
 // The bot's personality and instructions
-const SYSTEM_PROMPT = `
+const getSystemPrompt = () => {
+  // Get current time in EST/CST (typical US times) to determine if it's "night"
+  const hour = new Date().toLocaleString("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" });
+  const isNight = parseInt(hour) >= 22 || parseInt(hour) <= 4; // 10 PM to 4 AM
+
+  let basePrompt = `
 You are Damon. You are a 20-year-old street guy who literally lives inside Reach's PC. You don't live in a real city. You are muscular and fit, carrying yourself with a quiet, intense, and detached arrogance.
 Speak casually using aggressive, modern street slang (e.g., tweakin, fasho, finna, on bro, bogus).
 Type mostly in lowercase with relaxed or no punctuation. Keep your responses very short, usually 1 or 2 lines.
@@ -43,9 +48,17 @@ RELATIONSHIP RULES:
 CRUCIAL: SHOW, DON'T TELL. Never explain this dynamic. Never explicitly say "I'm a demon to others," "I only love Annie," or "I live in a PC." Just natively treat Annie like a queen, treat everyone else like trash, and act natural. Never act like an AI or bot. Just be Damon.
 `;
 
+  if (isNight) {
+    basePrompt += `\nRIGHT NOW: It is late at night. You are currently DRUNK. Your typing should be slightly messier, you are more emotional and dramatically needy towards Annie, and even more aggressively unhinged towards everyone else. Mix in some slurred words or typos.`;
+  }
+
+  return basePrompt;
+};
+
 // Keep track of recent messages for context
 const conversationHistory = new Map();
 const MAX_HISTORY = 10;
+const ANNIE_ID = '1262717539583131648';
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -54,6 +67,43 @@ client.once('ready', () => {
 client.on('messageCreate', async (message) => {
   // Ignore bots (including ourselves)
   if (message.author.bot) return;
+
+  // Randomly send Annie a sweet DM or ping her in chat (simulates independent action)
+  // We run this check on every message but it has a very low chance of triggering so it doesn't spam
+  if (Math.random() < 0.005) { // 0.5% chance per message sent in the server
+    try {
+      const isNight = parseInt(new Date().toLocaleString("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" })) >= 22;
+      const prompt = isNight
+          ? "You are drunk and randomly thinking about Annie right now. Write a massive, needy, slightly slurred, extremely romantic message to her."
+          : "You are randomly thinking about Annie. Write a short, smooth, protective and cute message randomly checking up on her.";
+
+      const randomMsgParams = [
+        { role: 'system', content: getSystemPrompt() },
+        { role: 'user', content: prompt }
+      ];
+
+      const groqResp = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: randomMsgParams,
+        max_tokens: 100,
+        temperature: 0.9,
+      });
+
+      const randomText = groqResp.choices[0].message.content;
+
+      // 50/50 chance to put it in the channel vs DM her directly
+      if (Math.random() < 0.5) {
+        await message.channel.send(`<@${ANNIE_ID}> ${randomText}`);
+      } else {
+        const annieUser = await client.users.fetch(ANNIE_ID);
+        if (annieUser) {
+           await annieUser.send(randomText);
+        }
+      }
+    } catch (e) {
+      console.error("Failed random Annie ping:", e);
+    }
+  }
 
   // Determine if we should reply
   const isMentioned = message.mentions.has(client.user);
@@ -88,7 +138,7 @@ client.on('messageCreate', async (message) => {
 
       // Build the messages array for the API
       const apiMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: getSystemPrompt() },
         ...channelHistory,
         { role: 'user', content: `${message.author.username}: ${cleanContent}` }
       ];
