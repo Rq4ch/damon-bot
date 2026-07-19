@@ -68,43 +68,6 @@ client.on('messageCreate', async (message) => {
   // Ignore bots (including ourselves)
   if (message.author.bot) return;
 
-  // Randomly send Annie a sweet DM or ping her in chat (simulates independent action)
-  // We run this check on every message but it has a very low chance of triggering so it doesn't spam
-  if (Math.random() < 0.005) { // 0.5% chance per message sent in the server
-    try {
-      const isNight = parseInt(new Date().toLocaleString("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" })) >= 22;
-      const prompt = isNight
-          ? "You are drunk and randomly thinking about Annie right now. Write a massive, needy, slightly slurred, extremely romantic message to her."
-          : "You are randomly thinking about Annie. Write a short, smooth, protective and cute message randomly checking up on her.";
-
-      const randomMsgParams = [
-        { role: 'system', content: getSystemPrompt() },
-        { role: 'user', content: prompt }
-      ];
-
-      const groqResp = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: randomMsgParams,
-        max_tokens: 100,
-        temperature: 0.9,
-      });
-
-      const randomText = groqResp.choices[0].message.content;
-
-      // 50/50 chance to put it in the channel vs DM her directly
-      if (Math.random() < 0.5) {
-        await message.channel.send(`<@${ANNIE_ID}> ${randomText}`);
-      } else {
-        const annieUser = await client.users.fetch(ANNIE_ID);
-        if (annieUser) {
-           await annieUser.send(randomText);
-        }
-      }
-    } catch (e) {
-      console.error("Failed random Annie ping:", e);
-    }
-  }
-
   // Determine if we should reply
   const isMentioned = message.mentions.has(client.user);
   const isReplyToBot = message.reference && message.reference.messageId
