@@ -95,7 +95,7 @@ client.on('messageCreate', async (message) => {
 
       // Call Groq API
       const response = await groq.chat.completions.create({
-        model: 'llama3-70b-8192', // Fast and cheap for chat on Groq
+        model: 'llama-3.3-70b-versatile', // Correct, active Groq model
         messages: apiMessages,
         max_tokens: 150,
         temperature: 0.8,
