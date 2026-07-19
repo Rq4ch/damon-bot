@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
-const { OpenAI } = require('openai');
+const Groq = require('groq-sdk');
 const express = require('express');
 
 // Initialize Web Server (Required to keep Render free tier awake)
@@ -15,10 +15,8 @@ app.listen(port, () => {
   console.log(`Web server listening on port ${port}`);
 });
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Groq instead of OpenAI
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Initialize Discord Client
 // We need specific intents to read messages in servers
@@ -95,9 +93,9 @@ client.on('messageCreate', async (message) => {
         { role: 'user', content: `${message.author.username}: ${cleanContent}` }
       ];
 
-      // Call OpenAI API
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini', // Fast and cheap for chat
+      // Call Groq API
+      const response = await groq.chat.completions.create({
+        model: 'llama3-70b-8192', // Fast and cheap for chat on Groq
         messages: apiMessages,
         max_tokens: 150,
         temperature: 0.8,
@@ -123,7 +121,7 @@ client.on('messageCreate', async (message) => {
       }
 
     } catch (error) {
-      console.error('Error fetching response from OpenAI:', error);
+      console.error('Error fetching response from Groq:', error);
       if (isMentioned || isReplyToBot) {
           await message.channel.send("sorry, my brain is lagging a bit rn.");
       }
