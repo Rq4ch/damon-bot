@@ -8,7 +8,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('Tatsu Discord Bot is running!');
+  res.send('Damon Discord Bot is running!');
 });
 
 app.listen(port, () => {
